@@ -1,43 +1,43 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import { runWorkflow } from "./workflow.js";
 
 const app = express();
 
-// Use PORT env var if set, otherwise default to 3000
-const port = process.env.PORT ?? 3000;
+// Use PORT from Render if set, otherwise default to 3000 (for local runs)
+const port = process.env.PORT || 3000;
 
 // Let Express understand JSON bodies like { "input_as_text": "..." }
 app.use(express.json());
 
-// Health check (for debugging / Render status)
-app.get("/health", (_req: Request, res: Response) => {
+// Simple health check endpoint
+app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-// Main workflow endpoint:
-// POST /run-workflow
-// Body: { "input_as_text": "some text" }
-app.post("/run-workflow", async (req: Request, res: Response) => {
+// Main endpoint called by n8n
+app.post("/run-workflow", async (req, res) => {
   try {
-    const body = req.body as { input_as_text?: string };
+    const { input_as_text } = req.body ?? {};
 
-    if (!body.input_as_text || typeof body.input_as_text !== "string") {
+    // Basic validation: we require a non-empty string
+    if (typeof input_as_text !== "string" || input_as_text.trim() === "") {
       return res.status(400).json({
-        error: "Missing or invalid 'input_as_text' in request body."
+        error: "Missing or invalid 'input_as_text'. It must be a non-empty string.",
       });
     }
 
-    // Call your workflow function
-    const result = await runWorkflow({
-      input_as_text: body.input_as_text
-    });
+    // Call your OpenAI-based workflow
+    const result = await runWorkflow({ input_as_text });
 
-    // result should look like: { instructions: "Send an email", body: "..." }
-    return res.json(result);
+    // Make absolutely sure we always return a JSON object
+    return res.json({
+      instructions: result?.instructions ?? "Send an email",
+      body: result?.body ?? "",
+    });
   } catch (error) {
     console.error("Error in /run-workflow:", error);
     return res.status(500).json({
-      error: "Internal server error while running workflow."
+      error: "Internal server error while running workflow.",
     });
   }
 });
@@ -46,3 +46,5 @@ app.post("/run-workflow", async (req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`Agent workflow server listening on port ${port}`);
 });
+
+export default app;
