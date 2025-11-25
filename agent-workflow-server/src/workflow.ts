@@ -433,8 +433,10 @@ export const runWorkflow = async (workflow: WorkflowInput) => {
       output_text: agentResultTemp1.finalOutput ?? ""
     };
     const transformResult = {
-      instructions: "Send an email",
-      body: agentResult1.output_text
-    };
-  });
+   instructions: "Send an email",
+   body: agentResult1.output_text
+ };
+ return transformResult;
+});
 }
+
